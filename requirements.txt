@@ -3,9 +3,12 @@ asgiref==3.8.1
 beautifulsoup4==4.12.3
 certifi==2025.1.31
 charset-normalizer==3.4.1
+cloudinary==1.42.2
 defusedxml==0.7.1
 dj-database-url==2.3.0
 Django==5.1.6
+django-cloudinary-storage==0.3.0
+django-cors-headers==4.7.0
 django-filter==24.3
 django-modelcluster==6.4
 django-permissionedforms==0.1
@@ -29,11 +32,13 @@ psycopg2==2.9.10
 psycopg2-binary==2.9.10
 python-dotenv==1.0.1
 requests==2.32.3
+six==1.17.0
 soupsieve==2.6
 sqlparse==0.5.3
 telepath==0.3.1
 typing_extensions==4.12.2
 urllib3==2.3.0
 wagtail==6.4
+wagtail-headless-preview==0.8.0
 whitenoise==6.9.0
 Willow==1.9.0
