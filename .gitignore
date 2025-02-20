@@ -1,0 +1,61 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+env/
+*.env
+*.venv
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Logs and databases
+*.log
+*.sqlite3
+
+# Media and static files
+media/
+staticfiles/
+static/
+
+# IDE/editor specific files
+.vscode/
+.idea/
+*.swp
+*~ 
+.DS_Store
+
+# Node.js dependencies
+node_modules/
+
+# Python cache
+*.pyc
+*.pyo
+*.pyd
+
+# Gunicorn logs
+gunicorn.log
+gunicorn.access.log
+gunicorn.error.log
+
+# Docker
+*.dockerfile
+docker-compose.override.yml
+
+# Celery beat and task queues
+celerybeat-schedule
+celerybeat.pid
+
+# Secret and environment variables
+.env
+.env.local
+.env.*.local
