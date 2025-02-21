@@ -20,13 +20,13 @@ class HomePageAPIView(APIView):
         
 class AboutPageAPIView(APIView):
     def get(self, request, *args, **kwargs):
-        # Fetch the first AboutPage instance
-        about_page = AboutPage.objects.first()  
+        about_page = AboutPage.objects.prefetch_related(
+            "faq_items", "product_panel_items", "chairman_pen_items"
+        ).first()
 
         if not about_page:
             return Response({"error": "About page not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Serialize the data
         serializer = AboutPageSerializer(about_page)
         return Response(serializer.data, status=status.HTTP_200_OK)
     

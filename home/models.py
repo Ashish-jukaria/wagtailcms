@@ -66,18 +66,70 @@ class CarouselItem(models.Model):
     
 class AboutPage(Page):
     content = RichTextField()
-
+    activities_services = RichTextField(blank=True, null=True)
     content_panels = Page.content_panels + [
         FieldPanel("content"),
+        FieldPanel("activities_services"),
+        InlinePanel("faq_items", label="FAQs"),
+        InlinePanel("product_panel_items", label="Product Panel"),
+        InlinePanel("chairman_pen_items", label="Chairman Pen"),
     ]
-    
-        
+          
     api_fields = [
         APIField("content"),
-       
+        APIField("activities_services"),
+        APIField("faq_items"),
+        APIField("product_panel_items"),
+        APIField("chairman_pen_items"),
+    ]
+
+class FAQItem(Orderable):
+    page = ParentalKey(AboutPage, on_delete=models.CASCADE, related_name="faq_items")
+    question = models.CharField(max_length=255)
+    answer = RichTextField()
+    
+    panels = [
+        FieldPanel("question"),
+        FieldPanel("answer"),
     ]
     
+    api_fields = [
+        APIField("question"),
+        APIField("answer"),
+    ]
     
+class ProductPanelItem(Orderable):
+    page = ParentalKey(AboutPage, on_delete=models.CASCADE, related_name="product_panel_items")
+    sl_no = models.IntegerField()
+    panel_name = models.CharField(max_length=255)
+    convenor = models.CharField(max_length=255)
+    officer = models.CharField(max_length=255)
+
+    panels = [
+        FieldPanel("sl_no"),
+        FieldPanel("panel_name"),
+        FieldPanel("convenor"),
+        FieldPanel("officer"),
+    ]
+    
+    api_fields = [
+        APIField("sl_no"),
+        APIField("panel_name"),
+        APIField("convenor"),
+        APIField("officer"),
+    ]
+    
+class ChairmanPenItem(Orderable):
+    page = ParentalKey(AboutPage, on_delete=models.CASCADE, related_name="chairman_pen_items")
+    content = RichTextField()
+
+    panels = [
+        FieldPanel("content"),
+    ]
+
+    api_fields = [
+        APIField("content"),
+    ]
 
 class EventsPage(Page):
     """
