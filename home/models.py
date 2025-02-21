@@ -131,4 +131,45 @@ class Event(Orderable):
    
     ]
     
-    
+
+
+
+class ImageGalleryPage(Page):
+    """
+    A Wagtail page to store multiple images in an image gallery.
+    """
+    content_panels = Page.content_panels + [
+        InlinePanel('gallery_images', label="Gallery Images"),
+    ]
+
+    api_fields = [
+        APIField("gallery_images"),
+    ]
+
+
+class ImageGalleryItem(Orderable):
+    """
+    An image entry for the ImageGalleryPage.
+    """
+    page = ParentalKey(
+        ImageGalleryPage, on_delete=models.CASCADE, related_name='gallery_images'
+    )
+    image = models.ForeignKey(CustomImage, on_delete=models.CASCADE, related_name="gallery_images")
+
+    panels = [
+        FieldPanel('image'),
+    ]
+
+    api_fields = [
+        APIField("image"),
+        APIField("image_id"),
+        APIField("image_url"),
+    ]
+
+    @property
+    def image_id(self):
+        return self.image.id if self.image else None
+
+    @property
+    def image_url(self):
+        return self.image.file.url if self.image else None
