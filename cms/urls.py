@@ -5,7 +5,7 @@ from django.contrib import admin
 from wagtail.admin import urls as wagtailadmin_urls
 from wagtail import urls as wagtail_urls
 from wagtail.documents import urls as wagtaildocs_urls
-from .views import HomePageAPIView
+from .views import HomePageAPIView,AboutPageAPIView,EventsListView
 
 from search import views as search_views
 
@@ -15,6 +15,9 @@ urlpatterns = [
     path("documents/", include(wagtaildocs_urls)),
     path("search/", search_views.search, name="search"),
     path("api/homepage/",HomePageAPIView.as_view(),name="home_page"),
+    path("api/aboutpage/",AboutPageAPIView.as_view(),name="about_page"),
+    path("api/events/",EventsListView.as_view(),name="events_page"),
+
 
 ]
 

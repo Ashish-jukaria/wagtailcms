@@ -1,5 +1,5 @@
 from django.db import models
-from wagtail.models import Page
+from wagtail.models import Page,Orderable
 from wagtail.images.models import Image
 from wagtail.admin.panels import FieldPanel, MultiFieldPanel,InlinePanel
 from wagtail.api import APIField
@@ -63,4 +63,72 @@ class CarouselItem(models.Model):
         if self.image:
             return self.image.file.url
         return None    
+    
+class AboutPage(Page):
+    content = RichTextField()
+
+    content_panels = Page.content_panels + [
+        FieldPanel("content"),
+    ]
+    
+        
+    api_fields = [
+        APIField("content"),
+       
+    ]
+    
+    
+
+class EventsPage(Page):
+    """
+    A Wagtail page to list and manage multiple events.
+    """
+    content_panels = Page.content_panels + [
+        InlinePanel('events', label="Events"),
+    ]
+    api_fields = [
+        APIField("events"), 
+    ]
+
+
+class Event(Orderable):
+    """
+    An event item that belongs to an EventsPage.
+    """
+    page = ParentalKey(
+        EventsPage, on_delete=models.CASCADE, related_name='events'
+    )
+    title = models.CharField(max_length=255)
+    image = models.ForeignKey(CustomImage, on_delete=models.CASCADE, related_name="event_image")
+    location = models.CharField(max_length=255)
+    start_date = models.DateTimeField("From")
+    end_date = models.DateTimeField("To")
+    
+    redirect_url = models.URLField(
+        blank=True,
+        null=True,
+        help_text="URL to redirect user when they click the event button."
+    )
+
+    panels = [
+        FieldPanel('title'),
+        FieldPanel('image'),
+        FieldPanel('location'),
+        FieldPanel('start_date'),
+        FieldPanel('end_date'),
+        FieldPanel('redirect_url'),
+
+    ]
+    
+    
+    api_fields = [
+        APIField("title"),
+        APIField("image"),
+        APIField("location"),
+        APIField("start_date"),    
+        APIField("end_date"), 
+        APIField("redirect_url"),
+   
+    ]
+    
     
