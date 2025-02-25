@@ -12,6 +12,8 @@ from modelcluster.fields import ParentalKey
 from rest_framework.serializers import SerializerMethodField
 from wagtail.rich_text import expand_db_html
 from bs4 import BeautifulSoup
+from cloudinary_storage.storage import RawMediaCloudinaryStorage
+
 
 
 class CustomImage(AbstractImage):
@@ -72,7 +74,7 @@ class AboutPage(Page):
         FieldPanel("activities_services"),
         InlinePanel("faq_items", label="FAQs"),
         InlinePanel("product_panel_items", label="Product Panel"),
-        InlinePanel("chairman_pen_items", label="Chairman Pen"),
+        InlinePanel("chairman_pen_items", label="Chairman Pen",max_num=1),
     ]
           
     api_fields = [
@@ -129,17 +131,43 @@ class ChairmanPenItem(Orderable):
 
     api_fields = [
         APIField("content"),
+        
     ]
 
 class EventsPage(Page):
     """
     A Wagtail page to list and manage multiple events.
     """
+    inee_body=RichTextField(blank=True)
+    iess_body=RichTextField(blank=True)
+    awards_body=RichTextField(blank=True)
+
+
     content_panels = Page.content_panels + [
         InlinePanel('events', label="Events"),
+        FieldPanel('inee_body'),
+        InlinePanel('inee_events',label="INEE"),
+        FieldPanel('iess_body'),  
+        InlinePanel('iess_events',label="IESS"),
+        FieldPanel('awards_body'),  
+        InlinePanel('events_awards',label="Awards"),
+        InlinePanel('events_webinar',label="Webinars/Seminars"),
+        InlinePanel('other_events',label="Other_Events"),
+
+
+
     ]
     api_fields = [
         APIField("events"), 
+        APIField("inee_body"),
+        APIField("inee_events"),
+        APIField("iess_body"),
+        APIField("iess_events"),
+        APIField("awards_body"),
+        APIField("events_awards"),
+        APIField("events_webinar"),
+        APIField("other_events")
+
     ]
 
 
@@ -225,3 +253,142 @@ class ImageGalleryItem(Orderable):
     @property
     def image_url(self):
         return self.image.file.url if self.image else None
+    
+    
+class Inee(Orderable):
+    page=ParentalKey(EventsPage,on_delete=models.CASCADE,related_name="inee_events")
+    sl_no=models.IntegerField()
+    year=models.PositiveIntegerField()
+    city=models.CharField(max_length=255)
+    country=models.CharField(max_length=255)
+    company_participated=models.IntegerField()
+    
+    panels=[
+        FieldPanel('sl_no'),
+        FieldPanel('year'),
+        FieldPanel('city'),
+        FieldPanel('country'),
+        FieldPanel('company_participated'),
+
+    ]
+    
+    api_fields=[
+        APIField('sl_no'),
+        APIField('year'),
+        APIField('city'),
+        APIField('country'),
+        APIField('company_participated'),
+        
+    ]
+    
+class Iess(Orderable):
+    page=ParentalKey(EventsPage,on_delete=models.CASCADE,related_name="iess_events")
+    name=models.CharField(max_length=255)
+    event_name=models.CharField(max_length=255)
+    from_date=models.DateField("From")
+    to_date=models.DateField("To")
+    venue=models.CharField(max_length=255)
+    post_show_report = models.FileField(upload_to="documents/", storage=RawMediaCloudinaryStorage(), blank=True, null=True)
+    
+    
+    panels=[
+        FieldPanel('name'),
+        FieldPanel('event_name'),
+        FieldPanel('from_date'),
+        FieldPanel('to_date'),
+        FieldPanel('venue'),
+        FieldPanel('post_show_report'),
+    ]
+    
+    api_fields=[
+        APIField('name'),
+        APIField('event_name'),
+        APIField('from_date'),
+        APIField('to_date'),
+        APIField('venue'),
+        APIField('post_show_report'),
+    ]
+
+
+class Awards_Presentation(Orderable):
+    REGION_CHOICES = [
+    ("EASTERN", "Eastern"),
+    ("WESTERN", "Western"),
+    ("NORTHERN", "Northern"),
+    ("SOUTHERN", "Southern"),
+    ]
+
+    page=ParentalKey(EventsPage,on_delete=models.CASCADE,related_name="events_awards")
+    name=models.CharField(max_length=255)
+    date=models.DateField()
+    places=models.CharField(max_length=255)
+    region=models.CharField(max_length=10,choices=REGION_CHOICES,default="NORTHERN")
+    
+    
+    panels=[
+        FieldPanel('name'),
+        FieldPanel('date'),
+        FieldPanel('places'),
+        FieldPanel('region'),
+    ]
+    
+    api_fields=[
+        APIField('name'),
+        APIField('date'),
+        APIField('places'),
+        APIField('region'),
+    ]
+    
+    
+class Webinar_Seminar(Orderable):
+    page=ParentalKey(EventsPage,on_delete=models.CASCADE,related_name="events_webinar")
+    from_date=models.DateField()
+    to_date=models.DateField()
+    from_time=models.TimeField()
+    to_time=models.TimeField()
+    title=models.CharField(max_length=255)
+    body=RichTextField(blank=True)
+    
+    panels=[
+        FieldPanel('from_date'),
+        FieldPanel('to_date'),
+        FieldPanel('from_time'),
+        FieldPanel('to_time'),
+        FieldPanel('title'),
+        FieldPanel('body'),
+    ]
+    
+    api_fields=[
+        APIField('from_date'),
+        APIField('to_date'),
+        APIField('from_time'),
+        APIField('to_time'),
+        APIField('title'),
+        APIField('body'),
+    ]
+    
+    
+class OtherEvents(Orderable):
+    page=ParentalKey(EventsPage,on_delete=models.CASCADE,related_name="other_events")
+    flag=models.ForeignKey(CustomImage,on_delete=models.CASCADE,related_name="flag_image")
+    from_date=models.DateField()
+    to_date=models.DateField()
+    heading=models.CharField(max_length=255)
+    body=RichTextField(blank=True)
+    
+    panels=[
+        FieldPanel("flag"),
+        FieldPanel("from_date"),
+        FieldPanel("to_date"),
+        FieldPanel("heading"),
+        FieldPanel("body"),
+    ]
+    
+    api_fields=[
+        APIField("flag"),
+        APIField("from_date"),
+        APIField("to_date"),
+        APIField("heading"),
+        APIField("body"),
+    ]
+    

@@ -2,9 +2,12 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils.timezone import now
+from wagtail.rich_text import expand_db_html
+from datetime import datetime
 
-from .serializers import HomePageSerializer,AboutPageSerializer,EventSerializer
-from home.models import HomePage,AboutPage,Event,ImageGalleryPage
+
+from .serializers import HomePageSerializer,AboutPageSerializer,EventSerializer,IessSerializer,IneeSerializer,WebinarSerializer,OtherEventsSerializer,AwardsSerializer
+from home.models import HomePage,AboutPage,Event,ImageGalleryPage,EventsPage,Webinar_Seminar,OtherEvents,Iess,Inee,Awards_Presentation
 
 class HomePageAPIView(APIView):
     def get(self,request):
@@ -71,3 +74,69 @@ class ImageGalleryAPIView(APIView):
         ]
 
         return Response({"gallery_images": data})
+    
+class EventsPageAPIView(APIView):
+    def get(self, request):
+        try:
+            events_page = EventsPage.objects.live().first()
+
+            response_data = {}
+            # Events Data
+            if events_page:
+                current_time = datetime.now()
+                
+                # Forthcoming and Past Events
+                forthcoming_events = Event.objects.filter(
+                    page=events_page,
+                    start_date__gte=current_time
+                ).order_by('start_date')
+                
+                past_events = Event.objects.filter(
+                    page=events_page,
+                    end_date__lt=current_time
+                ).order_by('-end_date')
+
+                events_data = {
+                    'forthcoming_events': EventSerializer(forthcoming_events, many=True).data,
+                    'past_events': EventSerializer(past_events, many=True).data,
+                    'inee': {
+                        'body': expand_db_html(events_page.inee_body) if events_page.inee_body else "",
+                        'data': IneeSerializer(
+                            Inee.objects.filter(page=events_page),
+                            many=True
+                        ).data
+                    },
+                    'iess': {
+                        'body': expand_db_html(events_page.iess_body) if events_page.iess_body else "",
+                        'data': IessSerializer(
+                            Iess.objects.filter(page=events_page),
+                            many=True
+                        ).data
+                    },
+                    'awards': {
+                        'body': expand_db_html(events_page.awards_body) if events_page.awards_body else "",
+                        'data': AwardsSerializer(
+                            Awards_Presentation.objects.filter(page=events_page),
+                            many=True
+                        ).data
+                    },
+                    'webinars_seminars': WebinarSerializer(
+                        Webinar_Seminar.objects.filter(page=events_page),
+                        many=True
+                    ).data,
+                    'other_events': OtherEventsSerializer(
+                        OtherEvents.objects.filter(page=events_page),
+                        many=True
+                    ).data
+                }
+                response_data['events'] = events_data
+            else:
+                response_data['events'] = None
+
+            return Response(response_data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
