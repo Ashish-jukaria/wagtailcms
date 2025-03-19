@@ -392,3 +392,9 @@ class OtherEvents(Orderable):
         APIField("body"),
     ]
     
+    
+class MembershipPage(Page):
+    membership_benefit=RichTextField(blank=True)
+    content_panels=Page.content_panels+[
+    FieldPanel('membership_benefit'),
+    ]

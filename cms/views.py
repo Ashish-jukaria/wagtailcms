@@ -140,3 +140,50 @@ class EventsPageAPIView(APIView):
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+            
+import os
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.parsers import JSONParser
+from rest_framework import status
+
+class SendEmailAPIView(APIView):
+    """
+    API endpoint to send an email using SendGrid.
+    """
+    def post(self, request, *args, **kwargs):
+        try:
+            # Parse the request data
+            data = JSONParser().parse(request)
+            subject = data.get('subject', 'No Subject')
+            message = data.get('message', '')
+            recipient_email = 'membership.officer@epcmd.in' 
+            sender_email = os.getenv('DEFAULT_FROM_EMAIL')
+
+            if not recipient_email:
+                return Response({"error": "Recipient email is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Create email message
+            email = Mail(
+                from_email=sender_email,
+                to_emails=recipient_email,
+                subject=subject,
+                plain_text_content=message
+            )
+
+            # Send email using SendGrid API
+            sg = SendGridAPIClient(os.getenv('SENDGRID_API_KEY'))
+            print("SENDGRID_API_KEY",os.getenv('SENDGRID_API_KEY'))
+            response = sg.send(email)
+
+            # Return response
+            return Response({
+                "success": "Email sent successfully",
+                "status_code": response.status_code
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print("Error Response:", str(e))
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

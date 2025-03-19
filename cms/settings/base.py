@@ -183,7 +183,23 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 10_000
 # Wagtail settings
 
 WAGTAIL_SITE_NAME = "cms"
+# Add these settings
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://epcmd.in',
+    'https://www.epcmd.in',
+]
+
+ALLOWED_HOSTS = [
+    'epcmd.in',
+    'www.epcmd.in',
+    'localhost',  # For local development
+    '127.0.0.1',  # For local development
+]
+
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True         
+                                                                                                
 # Search
 # https://docs.wagtail.org/en/stable/topics/search/backends.html
 WAGTAILSEARCH_BACKENDS = {
@@ -203,7 +219,8 @@ WAGTAILADMIN_BASE_URL = "http://example.com"
 WAGTAILDOCS_EXTENSIONS = ['csv', 'docx', 'key', 'odt', 'pdf', 'pptx', 'rtf', 'txt', 'xlsx', 'zip']
 WAGTAILIMAGES_IMAGE_MODEL = 'home.CustomImage'
 
-
+SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
 cloudinary.config(
     cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
     api_key=os.getenv("CLOUDINARY_API_KEY"),
