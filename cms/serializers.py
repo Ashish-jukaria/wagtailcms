@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from wagtail.rich_text import expand_db_html
 
-from home.models import CarouselItem,HomePage,AboutPage,Event,FAQItem,ChairmanPenItem,ProductPanelItem,Inee,Iess,Webinar_Seminar,Awards_Presentation,OtherEvents
+from home.models import CarouselItem,HomePage,AboutPage,Event,FAQItem,ChairmanPenItem,ProductPanelItem,Inee,Iess,Webinar_Seminar,Awards_Presentation,OtherEvents,CommitteeMemeber
 
 class CarouselItemSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
@@ -46,20 +46,26 @@ class ChairmanPenItemSerializer(serializers.ModelSerializer):
 
     def get_rendered_content(self, obj):
         return expand_db_html(obj.content) if obj.content else ""
-
+class CommitteeMemberSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CommitteeMemeber
+        fields = ['name', 'designation', 'image_url']
+        
 class AboutPageSerializer(serializers.ModelSerializer):
     rendered_content = serializers.SerializerMethodField()
     rendered_activities_services = serializers.SerializerMethodField()
     faq_items = FAQItemSerializer(many=True, read_only=True)
     product_panel_items = ProductPanelItemSerializer(many=True, read_only=True)
     chairman_pen_items = ChairmanPenItemSerializer(many=True, read_only=True)
+    committee_members = CommitteeMemberSerializer(many=True, read_only=True)
+    
 
     class Meta:
         model = AboutPage
         fields = [
             "id", "title", "rendered_content",
             "rendered_activities_services", "faq_items",
-            "product_panel_items", "chairman_pen_items"
+            "product_panel_items", "chairman_pen_items", "committee_members"
         ]
 
     def get_rendered_content(self, obj):

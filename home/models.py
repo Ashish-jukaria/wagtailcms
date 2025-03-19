@@ -75,6 +75,7 @@ class AboutPage(Page):
         InlinePanel("faq_items", label="FAQs"),
         InlinePanel("product_panel_items", label="Product Panel"),
         InlinePanel("chairman_pen_items", label="Chairman Pen",max_num=1),
+        InlinePanel("committee_members", label="Committee Members")
     ]
           
     api_fields = [
@@ -84,7 +85,29 @@ class AboutPage(Page):
         APIField("product_panel_items"),
         APIField("chairman_pen_items"),
     ]
-
+class CommitteeMemeber(Orderable):
+    page=ParentalKey(AboutPage,on_delete=models.CASCADE,related_name="committee_members")
+    name=models.CharField(max_length=255)
+    designation=models.CharField(max_length=255)
+    image=models.ForeignKey(CustomImage,on_delete=models.CASCADE,related_name="committee_member_image")
+    
+    panels=[
+        FieldPanel("name"),
+        FieldPanel("designation"),
+        FieldPanel("image"),
+    ]
+    
+    api_fields=[
+        APIField("name"),
+        APIField("designation"),
+        APIField("image_url"),
+    ]
+    
+    @property
+    def image_url(self):
+        if self.image:
+            return self.image.file.url
+        return None
 class FAQItem(Orderable):
     page = ParentalKey(AboutPage, on_delete=models.CASCADE, related_name="faq_items")
     question = models.CharField(max_length=255)

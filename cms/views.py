@@ -24,7 +24,7 @@ class HomePageAPIView(APIView):
 class AboutPageAPIView(APIView):
     def get(self, request, *args, **kwargs):
         about_page = AboutPage.objects.prefetch_related(
-            "faq_items", "product_panel_items", "chairman_pen_items"
+            "faq_items", "product_panel_items", "chairman_pen_items","committee_members"
         ).first()
 
         if not about_page:
