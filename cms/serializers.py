@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from wagtail.rich_text import expand_db_html
 
-from home.models import CarouselItem,HomePage,AboutPage,Event,FAQItem,ChairmanPenItem,ProductPanelItem,Inee,Iess,Webinar_Seminar,Awards_Presentation,OtherEvents,CommitteeMemeber
+from home.models import CarouselItem,HomePage,AboutPage,Event,FAQItem,ChairmanPenItem,ProductPanelItem,Inee,Iess,Webinar_Seminar,Awards_Presentation,OtherEvents,CommitteeMemeber,Designation
 
 class CarouselItemSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
@@ -46,10 +46,18 @@ class ChairmanPenItemSerializer(serializers.ModelSerializer):
 
     def get_rendered_content(self, obj):
         return expand_db_html(obj.content) if obj.content else ""
+class DesignationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Designation
+        fields = ['title']
+
+
 class CommitteeMemberSerializer(serializers.ModelSerializer):
+    designations = DesignationSerializer(many=True, source='designations.all')  # Nested serializer for designations
+
     class Meta:
         model = CommitteeMemeber
-        fields = ['name', 'designation', 'image_url']
+        fields = ['name', 'designations', 'image_url']
         
 class AboutPageSerializer(serializers.ModelSerializer):
     rendered_content = serializers.SerializerMethodField()

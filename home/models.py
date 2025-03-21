@@ -85,15 +85,16 @@ class AboutPage(Page):
         APIField("product_panel_items"),
         APIField("chairman_pen_items"),
     ]
-class CommitteeMemeber(Orderable):
+from modelcluster.models import ClusterableModel  # Import ClusterableModel
+
+class CommitteeMemeber(Orderable,ClusterableModel):
     page=ParentalKey(AboutPage,on_delete=models.CASCADE,related_name="committee_members")
     name=models.CharField(max_length=255)
-    designation=models.CharField(max_length=255)
     image=models.ForeignKey(CustomImage,on_delete=models.CASCADE,related_name="committee_member_image")
     
     panels=[
         FieldPanel("name"),
-        FieldPanel("designation"),
+        InlinePanel("designations", label="Designations"),  # Add InlinePanel for designations
         FieldPanel("image"),
     ]
     
@@ -108,6 +109,20 @@ class CommitteeMemeber(Orderable):
         if self.image:
             return self.image.file.url
         return None
+class Designation(Orderable):
+    """
+    A model to store multiple designations for a committee member.
+    """
+    member = ParentalKey(CommitteeMemeber, on_delete=models.CASCADE, related_name="designations")
+    title = models.CharField(max_length=255)
+
+    panels = [
+        FieldPanel("title"),
+    ]
+
+    api_fields = [
+        APIField("title"),
+    ]
 class FAQItem(Orderable):
     page = ParentalKey(AboutPage, on_delete=models.CASCADE, related_name="faq_items")
     question = models.CharField(max_length=255)
