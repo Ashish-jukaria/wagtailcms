@@ -57,7 +57,7 @@ class CommitteeMemberSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CommitteeMemeber
-        fields = ['name', 'designations', 'image_url']
+        fields = ['name', 'designations', 'image_url','subname']
         
 class AboutPageSerializer(serializers.ModelSerializer):
     rendered_content = serializers.SerializerMethodField()

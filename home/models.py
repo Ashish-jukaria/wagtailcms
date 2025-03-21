@@ -90,18 +90,22 @@ from modelcluster.models import ClusterableModel  # Import ClusterableModel
 class CommitteeMemeber(Orderable,ClusterableModel):
     page=ParentalKey(AboutPage,on_delete=models.CASCADE,related_name="committee_members")
     name=models.CharField(max_length=255)
+    subname=models.CharField(max_length=255,null=True,blank=True)
     image=models.ForeignKey(CustomImage,on_delete=models.CASCADE,related_name="committee_member_image")
     
     panels=[
         FieldPanel("name"),
         InlinePanel("designations", label="Designations"),  # Add InlinePanel for designations
         FieldPanel("image"),
+        FieldPanel("subname"),
+
     ]
     
     api_fields=[
         APIField("name"),
         APIField("designation"),
         APIField("image_url"),
+        APIField("subname"),
     ]
     
     @property
