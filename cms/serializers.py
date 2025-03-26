@@ -11,7 +11,7 @@ class CarouselItemSerializer(serializers.ModelSerializer):
         fields = ["id", "image_url", "caption"]
 
     def get_image_url(self, obj):
-        return obj.image.file.url if obj.image else None
+        return obj.image.signed_url if obj.image else None
 
 
 class HomePageSerializer(serializers.ModelSerializer):

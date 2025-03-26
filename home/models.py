@@ -1,3 +1,6 @@
+# models.py - FIRST 3 LINES
+from django.core.cache import caches
+cache = caches['default']  #
 from django.db import models
 from wagtail.models import Page,Orderable
 from wagtail.images.models import Image
@@ -13,25 +16,97 @@ from rest_framework.serializers import SerializerMethodField
 from wagtail.rich_text import expand_db_html
 from bs4 import BeautifulSoup
 from cloudinary_storage.storage import RawMediaCloudinaryStorage
-
+from storages.backends.s3boto3 import S3Boto3Storage  # Import S3 storage backend
+import boto3
+from django.conf import settings
+from django.core.files.storage import default_storage
+from wagtail.images.models import Filter
 
 
 class CustomImage(AbstractImage):
     file = models.ImageField(
         upload_to='images/',
-        storage=MediaCloudinaryStorage(),  # Cloudinary storage
+        storage=S3Boto3Storage(),  # Ensure S3 is used
         height_field='height',
         width_field='width',
         verbose_name='file'
     )
-    admin_form_fields=Image.admin_form_fields
+    admin_form_fields = Image.admin_form_fields
+    
+    @property
+    def signed_url(self):
+        """Generate a pre-signed URL that's valid for 1 hour"""
+        if not self.file:
+            return None
+        
+        try:
+            s3_client = boto3.client(
+                's3',
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                region_name=settings.AWS_S3_REGION_NAME,
+                config=boto3.session.Config(signature_version='s3v4')
+            )
+            return s3_client.generate_presigned_url(
+                'get_object',
+                Params={
+                    'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
+                    'Key': self.file.name,
+                    'ResponseContentDisposition': 'inline'
+                },
+                ExpiresIn=3600  # 1 hour expiration
+            )
+        except Exception as e:
+            print(f"Error generating signed URL: {str(e)}")
+            return None
+    
+
     
 
 class CustomRendition(AbstractRendition):
     image = models.ForeignKey(CustomImage, on_delete=models.CASCADE, related_name='renditions')
-
+    
     class Meta:
         unique_together = (('image', 'filter_spec', 'focal_point_key'),)
+# class CustomImage(AbstractImage):
+#     file = models.ImageField(
+#         upload_to='images/',
+#         # storage=MediaCloudinaryStorage(),  # Cloudinary storage
+#         storage=S3Boto3Storage(),  # Use S3 storage instead of Cloudinary
+#         height_field='height',
+#         width_field='width',
+#         verbose_name='file'
+#     )
+#     admin_form_fields=Image.admin_form_fields
+#     def get_signed_url(self):
+#         """Generate a temporary signed URL for accessing the image"""
+#         s3_client = boto3.client(
+#             "s3",
+#             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+#             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+#             region_name=settings.AWS_S3_REGION_NAME,
+#         )
+
+#         return s3_client.generate_presigned_url(
+#             "get_object",
+#             Params={"Bucket": settings.AWS_STORAGE_BUCKET_NAME, "Key": self.file.name},
+#             ExpiresIn=3600,  # URL expires in 1 hour
+#         )
+
+#     api_fields = [
+#         APIField("id"),
+#         APIField("signed_url", serializer=SerializerMethodField()),
+#     ]
+
+#     def get_signed_url_field(self, obj):
+#         return self.get_signed_url()
+
+
+# class CustomRendition(AbstractRendition):
+#     image = models.ForeignKey(CustomImage, on_delete=models.CASCADE, related_name='renditions')
+
+#     class Meta:
+#         unique_together = (('image', 'filter_spec', 'focal_point_key'),)
         
         
         
@@ -63,7 +138,7 @@ class CarouselItem(models.Model):
     @property
     def image_url(self):
         if self.image:
-            return self.image.file.url
+            return self.image.signed_url
         return None    
     
 class AboutPage(Page):
@@ -111,7 +186,7 @@ class CommitteeMemeber(Orderable,ClusterableModel):
     @property
     def image_url(self):
         if self.image:
-            return self.image.file.url
+            return self.image.signed_url
         return None
 class Designation(Orderable):
     """
@@ -294,7 +369,7 @@ class ImageGalleryItem(Orderable):
 
     @property
     def image_url(self):
-        return self.image.file.url if self.image else None
+        return self.image.signed_url if self.image else None
     
     
 class Inee(Orderable):
@@ -440,3 +515,5 @@ class MembershipPage(Page):
     content_panels=Page.content_panels+[
     FieldPanel('membership_benefit'),
     ]
+    
+
