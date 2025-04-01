@@ -515,5 +515,44 @@ class MembershipPage(Page):
     content_panels=Page.content_panels+[
     FieldPanel('membership_benefit'),
     ]
-    
 
+class Organization_Member_Page(Page):
+    content_panels = Page.content_panels + [
+        InlinePanel("members", label="Organization Members"),
+    ]
+from users.models import CustomUser  # Instead of from home.models
+from django.contrib.auth.hashers import make_password
+from django.core.exceptions import ValidationError
+from users.models import CustomUser
+
+class OrganizationMember(Orderable):
+    page = ParentalKey(Organization_Member_Page, on_delete=models.CASCADE, related_name="members")
+    email = models.EmailField(unique=True)
+    temp_password = models.CharField(
+        max_length=128,
+        blank=True,
+        verbose_name="Initial Password",
+        help_text="Set initial password (won't be stored after save)"
+    )
+
+    panels = [
+        FieldPanel("email"),
+        FieldPanel("temp_password"),
+    ]
+
+    def clean(self):
+        """Validate before saving"""
+        if self.temp_password and len(self.temp_password) < 8:
+            raise ValidationError("Password must be at least 8 characters")
+
+    def save(self, *args, **kwargs):
+        """Create user account on save"""
+        if self.temp_password:
+            # Create/update user with hashed password
+            CustomUser.objects.update_or_create(
+                email=self.email,
+                defaults={'password': make_password(self.temp_password)}
+            )
+            self.temp_password = ""  # Clear immediately after use
+        
+        super().save(*args, **kwargs)

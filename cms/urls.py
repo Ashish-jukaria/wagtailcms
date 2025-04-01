@@ -6,6 +6,7 @@ from wagtail.admin import urls as wagtailadmin_urls
 from wagtail import urls as wagtail_urls
 from wagtail.documents import urls as wagtaildocs_urls
 from .views import HomePageAPIView,AboutPageAPIView,EventsListView,UpcomingEventsListView,PastEventsListView,ImageGalleryAPIView,EventsPageAPIView,SendEmailAPIView
+from .views import LoginView, RequestOTPView, VerifyOTPView,ResetPasswordView, ForcePasswordResetView, UserCreateView, BulkUserUploadView,ActivateAccountView
 
 from search import views as search_views
 
@@ -22,7 +23,15 @@ urlpatterns = [
     path('api/image-gallery/', ImageGalleryAPIView.as_view(), name='past-events'),
     path('api/eventpage/',EventsPageAPIView.as_view(),name="events-page"),
     path('api/send-email/', SendEmailAPIView.as_view(), name='send_email'),
-
+    
+    path('api/auth/login/', LoginView.as_view(), name='login'),
+    path('api/auth/request-otp/', RequestOTPView.as_view(), name='request_otp'),
+    path('api/auth/verify-otp/', VerifyOTPView.as_view(), name='verify_otp'),
+    path('api/auth/forget-password/', ResetPasswordView.as_view(), name='forget_password'),
+    path('api/auth/expired-password/', ForcePasswordResetView.as_view(), name='expired_password'),
+    path('api/users/create/', UserCreateView.as_view(), name='user-create'),
+    path('api/users/bulk-upload/', BulkUserUploadView.as_view(), name='bulk-user-upload'),
+    path('api/users/activate-account/', ActivateAccountView.as_view(), name='activate-account'),
 
 ]
 

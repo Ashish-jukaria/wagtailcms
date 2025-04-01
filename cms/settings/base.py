@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "wagtail.api.v2",
     "rest_framework",
     "wagtail_headless_preview",
+    'users.apps.UsersConfig',  # Add this BEFORE 'wagtail' and 'home'
     "home",
     "search",
     "wagtail.contrib.forms",
@@ -58,6 +59,8 @@ INSTALLED_APPS = [
     "cloudinary",
     "cloudinary_storage",
     "storages",
+    "rest_framework_simplejwt",  # For JWT authentication
+    "rest_framework_simplejwt.token_blacklist",
 ]
 
 MIDDLEWARE = [
@@ -247,3 +250,44 @@ CACHES = {
         'LOCATION': 'unique-snowflake',
     }
 }
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+}
+
+# AUTH_PASSWORD_VALIDATORS = [
+#     {
+#         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+#     },
+#     {
+#         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+#         "OPTIONS": {
+#             "min_length": 8,
+#         }
+#     },
+#     {
+#         "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
+#     },
+#     {
+#         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+#     },
+#     # {
+#     #     "NAME": "home.validators.CustomPasswordValidator",  # Create this if you need custom rules
+#     # },
+# ]
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+AUTH_USER_MODEL = 'users.CustomUser'  # Add this
+FRONTEND_URL= os.getenv('FRONTEND_URL', 'http://localhost:3000')
