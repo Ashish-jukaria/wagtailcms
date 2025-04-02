@@ -6,7 +6,7 @@ from wagtail.admin import urls as wagtailadmin_urls
 from wagtail import urls as wagtail_urls
 from wagtail.documents import urls as wagtaildocs_urls
 from .views import HomePageAPIView,AboutPageAPIView,EventsListView,UpcomingEventsListView,PastEventsListView,ImageGalleryAPIView,EventsPageAPIView,SendEmailAPIView
-from .views import LoginView, RequestOTPView, VerifyOTPView,ResetPasswordView, ForcePasswordResetView, UserCreateView, BulkUserUploadView,ActivateAccountView
+from .views import LoginView, RequestOTPView, VerifyOTPView,ResetPasswordView, ForcePasswordResetView, UserCreateView, BulkUserUploadView,ActivateAccountView, UserFormDataView
 
 from search import views as search_views
 
@@ -32,6 +32,8 @@ urlpatterns = [
     path('api/users/create/', UserCreateView.as_view(), name='user-create'),
     path('api/users/bulk-upload/', BulkUserUploadView.as_view(), name='bulk-user-upload'),
     path('api/users/activate-account/', ActivateAccountView.as_view(), name='activate-account'),
+    path("user-form-data/", UserFormDataView.as_view(), name="user-form-data"),
+
 
 ]
 

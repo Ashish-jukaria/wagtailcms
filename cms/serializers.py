@@ -2,7 +2,7 @@ from rest_framework import serializers
 from wagtail.rich_text import expand_db_html
 
 from home.models import CarouselItem,HomePage,AboutPage,Event,FAQItem,ChairmanPenItem,ProductPanelItem,Inee,Iess,Webinar_Seminar,Awards_Presentation,OtherEvents,CommitteeMemeber,Designation
-
+from users.models import UserFormData
 class CarouselItemSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
 
@@ -143,3 +143,21 @@ class OtherEventsSerializer(serializers.ModelSerializer):
     
     def get_rendered_body(self, obj):
         return expand_db_html(obj.body) if obj.body else ""
+    
+    
+class UserFormDataSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserFormData
+        fields = "__all__"
+        read_only_fields = ["user"]
+
+    def validate(self, data):
+        # Ensure all fields except WhatsApp are provided
+        required_fields = [
+            "address", "contact_email", "contact_name", "description",
+            "gst", "pan", "hsn_codes", "organization", "contact_mobile"
+        ]
+        for field in required_fields:
+            if field not in data or not data[field]:
+                raise serializers.ValidationError({field: f"{field} is required."})
+        return data

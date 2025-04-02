@@ -763,3 +763,26 @@ class ActivateAccountView(APIView):
             {'message': 'Account activated successfully'},
             status=status.HTTP_200_OK
         )
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from users.models import UserFormData
+from .serializers import UserFormDataSerializer
+class UserFormDataView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Fetch user form data"""
+        user_data, created = UserFormData.objects.get_or_create(user=request.user)
+        serializer = UserFormDataSerializer(user_data)
+        return Response(serializer.data)
+
+    def post(self, request):
+        """Update user form data"""
+        user_data, created = UserFormData.objects.get_or_create(user=request.user)
+        serializer = UserFormDataSerializer(user_data, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

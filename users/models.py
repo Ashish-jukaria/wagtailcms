@@ -105,3 +105,19 @@ class PasswordHistory(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     password_hash = models.CharField(max_length=128)
     created_at = models.DateTimeField(auto_now_add=True)
+    
+class UserFormData(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name="form_data")
+    address = models.TextField()
+    contact_email = models.EmailField()
+    contact_name = models.CharField(max_length=255)
+    description = models.TextField()
+    gst = models.CharField(max_length=15, unique=True)
+    pan = models.CharField(max_length=10, unique=True)
+    hsn_codes = models.JSONField(default=list)
+    organization = models.CharField(max_length=255)
+    contact_mobile = models.CharField(max_length=15)
+    whatsapp = models.CharField(max_length=15, blank=True, null=True)  # Optional field
+
+    def __str__(self):
+        return f"Data for {self.user.email if self.user else 'Unknown User'}"
