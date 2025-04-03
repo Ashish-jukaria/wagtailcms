@@ -535,6 +535,7 @@ class UserCreateView(APIView):
                     
                     try:
                         user = CustomUser(
+                            email=user_data.get('contact_person_email', None),
                             firm_name=user_data['firm_name'],
                             gst_no=user_data['gst_no'],
                             membership_start_date=user_data['membership_start_date'],
@@ -547,15 +548,15 @@ class UserCreateView(APIView):
                         
                         user.full_clean()
                         user.save()
+                        otp=str(random.randint(100000, 999999))
+                        ActivationOTP.objects.create(user=user, otp=otp)
                         
+                        signer = Signer()
+                        hashed_id = signer.sign(str(user.id))
                         # Generate activation token
-                        token = default_token_generator.make_token(user)
-                        user.activation_token = token
-                        user.token_created_at = now()
-                        user.save()
-                        
+                       
                         # Send activation email
-                        activation_link = f"{settings.FRONTEND_URL}/activate-account?id={user.id}&token={token}"
+                        activation_link = f"{settings.FRONTEND_URL}/activate-account?id={hashed_id}"
                         send_email_via_sendgrid(
                             recipient_email=user.contact_person_email,
                             subject='Activate Your Account',
@@ -563,9 +564,8 @@ class UserCreateView(APIView):
                             Please activate your account for {user.firm_name} by clicking the link below:
                             {activation_link}
                             
-                            You will be asked to provide:
-                            - Your email address (for login)
-                            - A secure password
+                            Your OTP is: {otp}
+
                             '''
                         )
                         
@@ -605,7 +605,8 @@ class UserCreateView(APIView):
                 {'error': f'Unexpected error: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
+from django.core.signing import Signer, BadSignature
+from users.models import ActivationOTP
 class BulkUserUploadView(APIView):
     parser_classes = [MultiPartParser]
     permission_classes = [AllowAny]
@@ -651,7 +652,9 @@ class BulkUserUploadView(APIView):
             with transaction.atomic():
                 for index, row in df.iterrows():
                     try:
+                        email = row['contact_person_email']
                         user = CustomUser(
+                            email=email,
                             firm_name=row['firm_name'],
                             gst_no=row['gst_no'],
                             membership_start_date=row['membership_start_date'],
@@ -666,17 +669,23 @@ class BulkUserUploadView(APIView):
                         user.save()
                         
                         # Generate token
-                        token = default_token_generator.make_token(user)
-                        user.activation_token = token
-                        user.token_created_at = now()
-                        user.save()
+                        otp = str(random.randint(100000, 999999))
+                        ActivationOTP.objects.create(
+                            user=user,
+                            otp=otp
+                        )
                         
+                        signer = Signer()
+                        hashed_id = signer.sign(str(user.id))
                         # Send email
-                        activation_link = f"{settings.FRONTEND_URL}/activate-account?id={user.id}&token={token}"
+                        activation_link = f"{settings.FRONTEND_URL}/activate-account?id={hashed_id}"
                         send_email_via_sendgrid(
                             recipient_email=user.contact_person_email,
                             subject=f'Activate {user.firm_name} Account',
-                            message=f'Activation link: {activation_link}'
+                            message=f'''
+                            Activation link: {activation_link}
+                            Your OTP is: {otp}
+                            '''
                         )
                         
                         success_count += 1
@@ -697,6 +706,111 @@ class BulkUserUploadView(APIView):
                 {'error': f'File processing error: {str(e)}'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+            
+class VerifyActivationOTPView(APIView):
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        hashed_id = request.data.get('hashed_id')
+        otp = request.data.get('otp')
+        
+        try:
+            # Decode hashed ID
+            signer = Signer()
+            user_id = signer.unsign(hashed_id)
+            
+            user = CustomUser.objects.get(id=user_id, is_active=False)
+            activation_otp = ActivationOTP.objects.get(user=user)
+        except (BadSignature, CustomUser.DoesNotExist, ActivationOTP.DoesNotExist):
+            return Response(
+                {'error': 'Invalid activation request'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if OTP matches and is valid
+        if activation_otp.otp != otp or not activation_otp.is_valid():
+            return Response(
+                {'error': 'Invalid OTP'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Mark OTP as verified and generate reset token
+        activation_otp.is_verified = True
+        activation_otp.reset_token = default_token_generator.make_token(user)
+        activation_otp.save()
+        
+        return Response({
+            'message': 'OTP verified successfully',
+            'reset_token': activation_otp.reset_token,
+            'hashed_id': hashed_id
+        }, status=status.HTTP_200_OK)
+        
+class CompleteActivationView(APIView):
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        hashed_id = request.data.get('hashed_id')
+        token = request.data.get('token')
+        password = request.data.get('password')
+        confirm_password = request.data.get('confirm_password')
+        
+        try:
+            # Decode hashed ID
+            signer = Signer()
+            user_id = signer.unsign(hashed_id)
+            
+            user = CustomUser.objects.get(id=user_id, is_active=False)
+            activation_otp = ActivationOTP.objects.get(user=user)
+        except (BadSignature, CustomUser.DoesNotExist, ActivationOTP.DoesNotExist):
+            return Response(
+                {'error': 'Invalid activation request'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate token
+        if activation_otp.reset_token != token or not activation_otp.is_verified:
+            return Response(
+                {'error': 'Invalid or expired token'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate passwords match
+        if password != confirm_password:
+            return Response(
+                {'error': 'Passwords do not match'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate password strength
+        is_valid, message = validate_password(password)
+        if not is_valid:
+            return Response(
+                {'error': message},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Complete activation
+        with transaction.atomic():
+            # Activate user
+            user.is_active = True
+            user.set_password(password)
+            user.password_changed_date = now()
+            user.save()
+            
+            # Delete activation OTP
+            activation_otp.delete()
+            
+            # Record password history
+            PasswordHistory.objects.create(
+                user=user,
+                password_hash=user.password
+            )
+        
+        return Response(
+            {'message': 'Account activated successfully'},
+            status=status.HTTP_200_OK
+        )
+
 class ActivateAccountView(APIView):
     permission_classes = [AllowAny]
     

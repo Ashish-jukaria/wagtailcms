@@ -123,3 +123,17 @@ class UserFormData(models.Model):
 
     def __str__(self):
         return f"Data for {self.user.email if self.user else 'Unknown User'}"
+class ActivationOTP(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, primary_key=True)
+    otp = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    reset_token = models.CharField(max_length=100, blank=True)
+    is_verified = models.BooleanField(default=False)
+
+    def is_valid(self):
+        # No expiration - valid until password is set
+        return not self.is_verified
+
+    class Meta:
+        verbose_name = "Activation OTP"
+        verbose_name_plural = "Activation OTPs"
