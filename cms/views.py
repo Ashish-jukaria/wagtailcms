@@ -728,7 +728,7 @@ class VerifyActivationOTPView(APIView):
             )
         
         # Check if OTP matches and is valid
-        if activation_otp.otp != otp or not activation_otp.is_valid():
+        if activation_otp.otp != otp or activation_otp.is_valid():
             return Response(
                 {'error': 'Invalid OTP'},
                 status=status.HTTP_400_BAD_REQUEST
