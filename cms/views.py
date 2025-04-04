@@ -903,7 +903,7 @@ class UserFormDataView(APIView):
 
 class GetAllUsersAPIView(APIView):
     def get(self, request, *args, **kwargs):
-        users = CustomUser.objects.all()
+        users = CustomUser.objects.filter(is_admin=False, is_superuser=False)
         
         if not users.exists():
             return Response({"error": "No users found"}, status=status.HTTP_404_NOT_FOUND)
