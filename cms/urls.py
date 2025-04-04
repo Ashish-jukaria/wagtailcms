@@ -35,7 +35,7 @@ urlpatterns = [
     path("user-form-data/", UserFormDataView.as_view(), name="user-form-data"),
     path('auth/verify-activation-otp/', VerifyActivationOTPView.as_view(), name='verify-activation-otp'),
     path('auth/complete-activation/', CompleteActivationView.as_view(), name='complete-activation'),
-    path('get-all-users', GetAllUsersAPIView.as_view(), name='get-all-users'),
+    path('get-all-users/', GetAllUsersAPIView.as_view(), name='get-all-users'),
 
 
 ]
