@@ -900,3 +900,25 @@ class UserFormDataView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class GetAllUsersAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+        users = CustomUser.objects.all()
+        
+        if not users.exists():
+            return Response({"error": "No users found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        data = [
+            {
+                "firm_name": user.firm_name,
+                "gst_no": user.gst_no,
+                "membership_start_date": user.membership_start_date,
+                "membership_end_date": user.membership_end_date,
+                "contact_person_name": user.contact_person_name,
+                "contact_person_email": user.contact_person_email,
+                "contact_person_phone": user.contact_person_phone
+            } 
+            for user in users
+        ]
+        
+        return Response(data, status=status.HTTP_200_OK)
