@@ -893,7 +893,14 @@ class UserFormDataView(APIView):
         return Response({"error": error_messages}, status=status.HTTP_400_BAD_REQUEST)
 
 class GetAllUsersAPIView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request, *args, **kwargs):
+        if not request.user.is_admin:
+            Response(
+                {"error": "Only admin users are allowed to perform this action."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
         users = CustomUser.objects.filter(is_admin=False, is_superuser=False)
         
         if not users.exists():
