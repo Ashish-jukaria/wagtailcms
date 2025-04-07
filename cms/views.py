@@ -4,6 +4,8 @@ from rest_framework import status
 from django.utils.timezone import now
 from wagtail.rich_text import expand_db_html
 from datetime import datetime
+from rest_framework.permissions import IsAuthenticated
+
 
 
 from .serializers import HomePageSerializer,AboutPageSerializer,EventSerializer,IessSerializer,IneeSerializer,WebinarSerializer,OtherEventsSerializer,AwardsSerializer
@@ -243,6 +245,19 @@ def get_tokens_for_user(user):
     }
 from django.contrib.auth.hashers import check_password
 from django.db import models
+from rest_framework_simplejwt.tokens import RefreshToken
+
+def get_tokens_for_user(user):
+    refresh = RefreshToken.for_user(user)
+    
+    # Add custom claims here 👇
+    refresh['is_admin'] = user.is_admin
+    refresh['email'] = user.email
+
+    return {
+        'refresh': str(refresh),
+        'access': str(refresh.access_token),
+    }
 class LoginView(APIView):
     permission_classes = [AllowAny]
     
@@ -262,10 +277,8 @@ class LoginView(APIView):
             }, status=status.HTTP_403_FORBIDDEN)
         
         tokens = get_tokens_for_user(user)
-        return Response({
-            **tokens,
-            'is_admin': user.is_admin
-        })
+        return Response(tokens)
+
 
 class RequestOTPView(APIView):
     permission_classes = [AllowAny]
@@ -505,7 +518,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 
 class UserCreateView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     
     def post(self, request):
         # Check if data is a single user or multiple users
@@ -609,9 +622,14 @@ from django.core.signing import Signer, BadSignature
 from users.models import ActivationOTP
 class BulkUserUploadView(APIView):
     parser_classes = [MultiPartParser]
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     
     def post(self, request):
+        if not request.user.is_admin:
+            return Response(
+                {"error": "Only admin users are allowed to perform this action."},
+                status=status.HTTP_403_FORBIDDEN
+            )
         if 'file' not in request.FILES:
             return Response(
                 {'error': 'No file uploaded'},
@@ -711,6 +729,11 @@ class VerifyActivationOTPView(APIView):
     permission_classes = [AllowAny]
     
     def post(self, request):
+        if not request.user.is_admin:
+            return Response(
+                {"error": "Only admin users are allowed to perform this action."},
+                status=status.HTTP_403_FORBIDDEN
+            )
         hashed_id = request.data.get('hashed_id')
         otp = request.data.get('otp')
         
@@ -878,7 +901,6 @@ class ActivateAccountView(APIView):
             status=status.HTTP_200_OK
         )
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
 from users.models import UserFormData
 from .serializers import UserFormDataSerializer
 class UserFormDataView(APIView):

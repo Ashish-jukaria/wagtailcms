@@ -161,3 +161,36 @@ class UserFormDataSerializer(serializers.ModelSerializer):
             if field not in data or not data[field]:
                 raise serializers.ValidationError({field: f"{field} is required."})
         return data
+    
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+# class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+#     @classmethod
+#     def get_token(cls, user):
+#         token = super().get_token(user)
+
+#         # Add custom claims
+#         token['is_admin'] = user.is_admin
+#         return token
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework import serializers
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+class CustomTokenRefreshSerializer(TokenRefreshSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        
+        refresh = RefreshToken(attrs['refresh'])
+        user_id = refresh['user_id']
+        user = User.objects.get(id=user_id)
+
+        # Inject custom claims into the new access token
+        new_access = refresh.access_token
+        new_access['is_admin'] = user.is_admin
+        new_access['email'] = user.email
+
+        data['access'] = str(new_access)
+        return data
