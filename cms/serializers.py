@@ -160,6 +160,10 @@ class UserFormDataSerializer(serializers.ModelSerializer):
         for field in required_fields:
             if field not in data or not data[field]:
                 raise serializers.ValidationError({field: f"{field} is required."})
+        if data.get("alternate_email") == data.get("contact_email"):
+            raise serializers.ValidationError({
+                "alternate_email": "Alternate email cannot be the same as contact email."
+            })
         return data
     
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
