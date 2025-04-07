@@ -519,217 +519,178 @@ from django.db import IntegrityError
 
 class UserCreateView(APIView):
     permission_classes = [IsAuthenticated]
-    
+
     def post(self, request):
         if not request.user.is_admin:
             return Response(
                 {"error": "Only admin users are allowed to perform this action."},
                 status=status.HTTP_403_FORBIDDEN
             )
-        # Check if data is a single user or multiple users
+
         user_data_list = request.data if isinstance(request.data, list) else [request.data]
-        
+
+        users_to_create = []
+
         required_fields = [
-            'firm_name', 'gst_no', 
+            'firm_name', 'gst_no',
             'membership_start_date', 'membership_end_date',
             'contact_person_name', 'contact_person_email',
             'contact_person_phone'
         ]
-        
-        created_users = []
-        errors = []
-        
-        try:
-            with transaction.atomic():
-                for index, user_data in enumerate(user_data_list):
-                    # Validate required fields for each user
-                    missing_fields = [field for field in required_fields if field not in user_data]
-                    if missing_fields:
-                        errors.append({
-                            'index': index,
-                            'error': f'Missing required fields: {", ".join(missing_fields)}'
-                        })
-                        continue
-                    
-                    try:
-                        user = CustomUser(
-                            email=user_data.get('contact_person_email', None),
-                            firm_name=user_data['firm_name'],
-                            gst_no=user_data['gst_no'],
-                            membership_start_date=user_data['membership_start_date'],
-                            membership_end_date=user_data['membership_end_date'],
-                            contact_person_name=user_data['contact_person_name'],
-                            contact_person_email=user_data['contact_person_email'],
-                            contact_person_phone=user_data['contact_person_phone'],
-                            is_active=False
-                        )
-                        
-                        user.full_clean()
-                        user.save()
-                        otp=str(random.randint(100000, 999999))
-                        ActivationOTP.objects.create(user=user, otp=otp)
-                        
-                        signer = Signer()
-                        hashed_id = signer.sign(str(user.id))
-                        # Generate activation token
-                       
-                        # Send activation email
-                        activation_link = f"{settings.FRONTEND_URL}/activate-account?id={hashed_id}"
-                        send_email_via_sendgrid(
-                            recipient_email=user.contact_person_email,
-                            subject='Activate Your Account',
-                            message=f'''
-                            Please activate your account for {user.firm_name} by clicking the link below:
-                            {activation_link}
-                            
-                            Your OTP is: {otp}
 
-                            '''
-                        )
-                        
-                        created_users.append({
-                            'id': user.id,
-                            'firm_name': user.firm_name,
-                            'contact_email': user.contact_person_email
-                        })
-                        
-                    except ValidationError as e:
-                        errors.append({
-                            'index': index,
-                            'error': str(e),
-                            'data': user_data
-                        })
-                    except IntegrityError:
-                        errors.append({
-                            'index': index,
-                            'error': 'A firm with this GST number already exists',
-                            'data': user_data
-                        })
-        
-                if not created_users and errors:
-                    return Response(
-                        {'error': 'All user creations failed', 'details': errors},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-                
-                return Response({
-                    'message': f'Successfully created {len(created_users)} user(s)',
-                    'created_users': created_users,
-                    'errors': errors if errors else None
-                }, status=status.HTTP_201_CREATED)
-                
-        except Exception as e:
-            return Response(
-                {'error': f'Unexpected error: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+        for user_data in user_data_list:
+            missing_fields = [field for field in required_fields if not user_data.get(field)]
+            if missing_fields:
+                return Response(
+                    {"error": f"Missing required fields: {', '.join(missing_fields)}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if CustomUser.objects.filter(email=user_data['contact_person_email']).exists():
+                return Response(
+                    {"error": "A user with this email already exists."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if CustomUser.objects.filter(gst_no=user_data['gst_no']).exists():
+                return Response(
+                    {"error": "A user with this GST number already exists."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            try:
+                user = CustomUser(
+                    email=user_data['contact_person_email'],
+                    firm_name=user_data['firm_name'],
+                    gst_no=user_data['gst_no'],
+                    membership_start_date=user_data['membership_start_date'],
+                    membership_end_date=user_data['membership_end_date'],
+                    contact_person_name=user_data['contact_person_name'],
+                    contact_person_email=user_data['contact_person_email'],
+                    contact_person_phone=user_data['contact_person_phone'],
+                    is_active=False
+                )
+                user.full_clean()
+                users_to_create.append(user)
+            except ValidationError as e:
+                return Response({"error": e.messages[0]}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            created_users = []
+            for user in users_to_create:
+                user.save()
+                otp = str(random.randint(100000, 999999))
+                ActivationOTP.objects.create(user=user, otp=otp)
+                signer = Signer()
+                hashed_id = signer.sign(str(user.id))
+                activation_link = f"{settings.FRONTEND_URL}/activate-account?id={hashed_id}"
+                send_email_via_sendgrid(
+                    recipient_email=user.contact_person_email,
+                    subject='Activate Your Account',
+                    message=f'''
+                    Please activate your account for {user.firm_name}:
+                    {activation_link}
+
+                    OTP: {otp}
+                    '''
+                )
+                created_users.append({
+                    "id": user.id,
+                    "firm_name": user.firm_name,
+                    "contact_email": user.contact_person_email
+                })
+
+        return Response({
+            "message": f"Successfully created {len(created_users)} user(s).",
+            "created_users": created_users
+        }, status=status.HTTP_201_CREATED)
+
 from django.core.signing import Signer, BadSignature
 from users.models import ActivationOTP
 class BulkUserUploadView(APIView):
     parser_classes = [MultiPartParser]
     permission_classes = [IsAuthenticated]
-    
+
     def post(self, request):
         if not request.user.is_admin:
             return Response(
                 {"error": "Only admin users are allowed to perform this action."},
                 status=status.HTTP_403_FORBIDDEN
             )
+
         if 'file' not in request.FILES:
-            return Response(
-                {'error': 'No file uploaded'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
+            return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+
         file = request.FILES['file']
-        
         try:
-            # Read file
             if file.name.endswith('.csv'):
                 df = pd.read_csv(file)
             elif file.name.endswith(('.xls', '.xlsx')):
                 df = pd.read_excel(file)
             else:
-                return Response(
-                    {'error': 'Unsupported file format'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
+                return Response({"error": "Unsupported file format"}, status=status.HTTP_400_BAD_REQUEST)
+
             required_columns = [
                 'firm_name', 'gst_no',
                 'membership_start_date', 'membership_end_date',
                 'contact_person_name', 'contact_person_email',
                 'contact_person_phone'
             ]
-            
-            missing_columns = [col for col in required_columns if col not in df.columns]
-            if missing_columns:
-                return Response(
-                    {'error': f'Missing columns: {", ".join(missing_columns)}'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            success_count = 0
-            errors = []
-            
+
+            missing_cols = [col for col in required_columns if col not in df.columns]
+            if missing_cols:
+                return Response({"error": f"Missing columns: {', '.join(missing_cols)}"}, status=400)
+
+            users_to_create = []
+
+            for _, row in df.iterrows():
+                if CustomUser.objects.filter(email=row['contact_person_email']).exists():
+                    return Response({"error": "A user with this email already exists."}, status=400)
+
+                if CustomUser.objects.filter(gst_no=row['gst_no']).exists():
+                    return Response({"error": "A user with this GST number already exists."}, status=400)
+
+                try:
+                    user = CustomUser(
+                        email=row['contact_person_email'],
+                        firm_name=row['firm_name'],
+                        gst_no=row['gst_no'],
+                        membership_start_date=row['membership_start_date'],
+                        membership_end_date=row['membership_end_date'],
+                        contact_person_name=row['contact_person_name'],
+                        contact_person_email=row['contact_person_email'],
+                        contact_person_phone=row['contact_person_phone'],
+                        is_active=False
+                    )
+                    user.full_clean()
+                    users_to_create.append(user)
+                except ValidationError as e:
+                    return Response({"error": e.messages[0]}, status=400)
+
             with transaction.atomic():
-                for index, row in df.iterrows():
-                    try:
-                        email = row['contact_person_email']
-                        user = CustomUser(
-                            email=email,
-                            firm_name=row['firm_name'],
-                            gst_no=row['gst_no'],
-                            membership_start_date=row['membership_start_date'],
-                            membership_end_date=row['membership_end_date'],
-                            contact_person_name=row['contact_person_name'],
-                            contact_person_email=row['contact_person_email'],
-                            contact_person_phone=row['contact_person_phone'],
-                            is_active=False
-                        )
-                        
-                        user.full_clean()
-                        user.save()
-                        
-                        # Generate token
-                        otp = str(random.randint(100000, 999999))
-                        ActivationOTP.objects.create(
-                            user=user,
-                            otp=otp
-                        )
-                        
-                        signer = Signer()
-                        hashed_id = signer.sign(str(user.id))
-                        # Send email
-                        activation_link = f"{settings.FRONTEND_URL}/activate-account?id={hashed_id}"
-                        send_email_via_sendgrid(
-                            recipient_email=user.contact_person_email,
-                            subject=f'Activate {user.firm_name} Account',
-                            message=f'''
-                            Activation link: {activation_link}
-                            Your OTP is: {otp}
-                            '''
-                        )
-                        
-                        success_count += 1
-                        
-                    except ValidationError as e:
-                        errors.append(f"Row {index+1}: {str(e)}")
-                    except IntegrityError:
-                        errors.append(f"Row {index+1}: Duplicate GST number")
-            
+                for user in users_to_create:
+                    user.save()
+                    otp = str(random.randint(100000, 999999))
+                    ActivationOTP.objects.create(user=user, otp=otp)
+                    signer = Signer()
+                    hashed_id = signer.sign(str(user.id))
+                    activation_link = f"{settings.FRONTEND_URL}/activate-account?id={hashed_id}"
+                    send_email_via_sendgrid(
+                        recipient_email=user.contact_person_email,
+                        subject=f'Activate {user.firm_name} Account',
+                        message=f'''
+                        Activation link: {activation_link}
+                        OTP: {otp}
+                        '''
+                    )
+
             return Response({
-                'message': f'Processed {len(df)} records',
-                'success_count': success_count,
-                'errors': errors
-            })
-            
+                "message": f"Successfully created {len(users_to_create)} users."
+            }, status=status.HTTP_201_CREATED)
+
         except Exception as e:
-            return Response(
-                {'error': f'File processing error: {str(e)}'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-            
+            return Response({"error": f"File processing error: {str(e)}"}, status=400)
+
 class VerifyActivationOTPView(APIView):
     permission_classes = [AllowAny]
     
