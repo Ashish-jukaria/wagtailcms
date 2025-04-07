@@ -921,8 +921,15 @@ class UserFormDataView(APIView):
         if serializer.is_valid():
             serializer.save(user=request.user)
             return Response(serializer.data, status=status.HTTP_200_OK)
+        error_messages = []
+        for field, messages in serializer.errors.items():
+            if isinstance(messages, list):
+                for msg in messages:
+                    error_messages.append(f"{field}: {msg}")
+            else:
+                error_messages.append(f"{field}: {messages}")
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": error_messages}, status=status.HTTP_400_BAD_REQUEST)
 
 class GetAllUsersAPIView(APIView):
     def get(self, request, *args, **kwargs):
