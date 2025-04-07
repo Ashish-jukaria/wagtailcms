@@ -144,6 +144,7 @@ class OtherEventsSerializer(serializers.ModelSerializer):
     def get_rendered_body(self, obj):
         return expand_db_html(obj.body) if obj.body else ""
     
+import re
     
 class UserFormDataSerializer(serializers.ModelSerializer):
     class Meta:
@@ -164,6 +165,10 @@ class UserFormDataSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 "alternate_email": "Alternate email cannot be the same as contact email."
             })
+        if not re.match(r"^[A-Z]{5}[0-9]{4}[A-Z]{1}$", data["pan"].upper()):
+            raise serializers.ValidationError({"pan": "Invalid PAN format. Expected 5 letters, 4 digits, 1 letter."})
+        if not re.match(r"^[0-9A-Z]{15}$", data["gst"].upper()):
+            raise serializers.ValidationError({"gst": "Invalid GST format. Must be 15 alphanumeric characters."})
         return data
     
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
