@@ -521,6 +521,11 @@ class UserCreateView(APIView):
     permission_classes = [IsAuthenticated]
     
     def post(self, request):
+        if not request.user.is_admin:
+            return Response(
+                {"error": "Only admin users are allowed to perform this action."},
+                status=status.HTTP_403_FORBIDDEN
+            )
         # Check if data is a single user or multiple users
         user_data_list = request.data if isinstance(request.data, list) else [request.data]
         
@@ -729,11 +734,7 @@ class VerifyActivationOTPView(APIView):
     permission_classes = [AllowAny]
     
     def post(self, request):
-        if not request.user.is_admin:
-            return Response(
-                {"error": "Only admin users are allowed to perform this action."},
-                status=status.HTTP_403_FORBIDDEN
-            )
+       
         hashed_id = request.data.get('hashed_id')
         otp = request.data.get('otp')
         
