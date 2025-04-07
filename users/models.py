@@ -119,7 +119,7 @@ class UserFormData(models.Model):
     contact_mobile = models.CharField(max_length=15)
     whatsapp = models.CharField(max_length=15, blank=True, null=True)  # Optional field
     last_updated_on = models.DateTimeField(auto_now=True)  
-
+    alternate_email = models.EmailField(blank=True, null=True)  # 🔹 New field
 
     def __str__(self):
         return f"Data for {self.user.email if self.user else 'Unknown User'}"

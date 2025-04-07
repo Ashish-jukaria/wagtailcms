@@ -155,7 +155,7 @@ class UserFormDataSerializer(serializers.ModelSerializer):
         # Ensure all fields except WhatsApp are provided
         required_fields = [
             "address", "contact_email", "contact_name", "description",
-            "gst", "pan", "hsn_codes", "organization", "contact_mobile"
+            "gst", "pan", "hsn_codes", "organization", "contact_mobile","alternate_email"
         ]
         for field in required_fields:
             if field not in data or not data[field]:
